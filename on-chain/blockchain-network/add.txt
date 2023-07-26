@@ -1,0 +1,10 @@
+添加一个组织需要修改的东西
+
+1. addOrg目录下所有和orgX相关的东西，比如org3改为org4、org5等，端口11051也要相应修改
+
+2. test-network/script目录下的envVar.sh，要添加新组织的切换信息；setAnchorPeer也要设置
+
+3. 节点越多，invoke时需要的背书节点越多，要超过一半
+
+4. 启用CA，/fabric-ca的文件也要修改，不过已经改好
+

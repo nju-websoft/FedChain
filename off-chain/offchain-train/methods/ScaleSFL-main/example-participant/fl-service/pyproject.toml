@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "example-participant"
+version = "0.0.1"
+description = "An example participant in sharded federated learning"
+authors = ["Evan Madill <madille@myumanitoba.ca>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+Flask = "^2.0.2"
+flwr = { version="^0.17.0", extras=["simulation"] }
+seaborn = "^0.11.2"
+requests = "^2.26.0"
+inquirerpy = "^0.3.0"
+grequests = "^0.6.0"
+
+[tool.poetry.dev-dependencies]
+ipykernel = "^6.5.1"
+black = "^21.11b1"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

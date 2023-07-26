@@ -1,0 +1,46 @@
+#!/bin/bash
+# Exit on first error
+set -ex
+starttime=$(date +%s)
+# Bring the test network down
+pushd ../test-network
+./network.sh down
+popd
+
+docker volume prune
+# clean out any old identites in the wallets
+rm -rf ./clientNode/wallet/*
+rm -rf ./storageServer/wallet/*
+
+# Clean old downloads
+rm -rf ./clientNode/model/downloadedWeights/*
+
+# Exit on first error
+set -e
+
+# don't rewrite paths for Windows Git Bash users
+export MSYS_NO_PATHCONV=1
+
+CC_SRC_LANGUAGE='go' # chaincode runtime language is node.js
+
+#CC_SRC_PATH="../chaincode/factchain2/go/"
+CC_SRC_PATH="../chaincode/federated/go/"
+
+# clean out any old identites in the wallets
+rm -rf javascript/wallet/*
+
+# clean the keystore
+rm -rf ./hfc-key-store
+
+# launch network; create channel and join peer to channel
+pushd ../test-network
+./network.sh down
+./network.sh up createChannel -ca -s couchdb
+./network.sh deployCC -ccn federated -ccv 1 -cci initLedger -ccl ${CC_SRC_LANGUAGE} -ccp ${CC_SRC_PATH}
+#./network.sh deployCC -ccn federated -ccv 1 -ccl ${CC_SRC_LANGUAGE} -ccp ${CC_SRC_PATH}
+popd
+
+cat <<EOF
+
+Total setup execution time : $(($(date +%s) - starttime)) secs ...
+EOF

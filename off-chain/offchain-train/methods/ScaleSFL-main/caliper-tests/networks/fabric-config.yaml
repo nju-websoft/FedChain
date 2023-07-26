@@ -1,0 +1,135 @@
+name: Fabric
+version: "2.0.0"
+
+caliper:
+    blockchain: fabric
+    sutOptions:
+        mutualTls: true
+
+channels:
+    - channelName: mainline
+      contracts:
+          - id: catalyst
+            contractID: catalyst
+    - channelName: shard0
+      contracts:
+          - id: models0
+            contractID: models0
+    - channelName: shard1
+      contracts:
+          - id: models1
+            contractID: models1
+    - channelName: shard2
+      contracts:
+          - id: models2
+            contractID: models2
+    - channelName: shard3
+      contracts:
+          - id: models3
+            contractID: models3
+    - channelName: shard4
+      contracts:
+          - id: models4
+            contractID: models4
+    - channelName: shard5
+      contracts:
+          - id: models5
+            contractID: models5
+    - channelName: shard6
+      contracts:
+          - id: models6
+            contractID: models6
+    - channelName: shard7
+      contracts:
+          - id: models7
+            contractID: models7
+
+organizations:
+    - mspid: Org1MSP
+      identities:
+          certificates:
+              - name: "client0.org1.example.com"
+                clientPrivateKey:
+                    path: "../test-network/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/keystore/d268edc303821246ea0d3b78e7242ada269e9ddbc9848fb94e3c650de99d9ea5_sk"
+                clientSignedCert:
+                    path: "../test-network/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/signcerts/cert.pem"
+      connectionProfile:
+          path: "../test-network/organizations/peerOrganizations/org1.example.com/connection-org1.yaml"
+          discover: false
+    - mspid: Org2MSP
+      identities:
+          certificates:
+              - name: "client0.org2.example.com"
+                clientPrivateKey:
+                    path: "../test-network/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/keystore/c279c3a481d0e83c045b8fae2ee4db0c541571e70460cc204a24744b2dde155a_sk"
+                clientSignedCert:
+                    path: "../test-network/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/signcerts/cert.pem"
+      connectionProfile:
+          path: "../test-network/organizations/peerOrganizations/org2.example.com/connection-org2.yaml"
+          discover: false
+    - mspid: Org3MSP
+      identities:
+          certificates:
+              - name: "client0.org3.example.com"
+                clientPrivateKey:
+                    path: "../test-network/organizations/peerOrganizations/org3.example.com/users/User1@org3.example.com/msp/keystore/b9fb67120cc36c0579a25530fb2cbb68cade1531eaf4d413006e61373f5bf729_sk"
+                clientSignedCert:
+                    path: "../test-network/organizations/peerOrganizations/org3.example.com/users/User1@org3.example.com/msp/signcerts/cert.pem"
+      connectionProfile:
+          path: "../test-network/organizations/peerOrganizations/org3.example.com/connection-org3.yaml"
+          discover: false
+    - mspid: Org4MSP
+      identities:
+          certificates:
+              - name: "client0.org4.example.com"
+                clientPrivateKey:
+                    path: "../test-network/organizations/peerOrganizations/org4.example.com/users/User1@org4.example.com/msp/keystore/41117b285949f1bfec0df947776458009e9d89baa01029458bc8f93e5d01a1a2_sk"
+                clientSignedCert:
+                    path: "../test-network/organizations/peerOrganizations/org4.example.com/users/User1@org4.example.com/msp/signcerts/cert.pem"
+      connectionProfile:
+          path: "../test-network/organizations/peerOrganizations/org4.example.com/connection-org4.yaml"
+          discover: false
+    - mspid: Org5MSP
+      identities:
+          certificates:
+              - name: "client0.org5.example.com"
+                clientPrivateKey:
+                    path: "../test-network/organizations/peerOrganizations/org5.example.com/users/User1@org5.example.com/msp/keystore/ca22480527d26e0e9c4c88dd8fb676bd40c5f3aeb2a60b27a4082c5c2c510d64_sk"
+                clientSignedCert:
+                    path: "../test-network/organizations/peerOrganizations/org5.example.com/users/User1@org5.example.com/msp/signcerts/cert.pem"
+      connectionProfile:
+          path: "../test-network/organizations/peerOrganizations/org5.example.com/connection-org5.yaml"
+          discover: false
+    - mspid: Org6MSP
+      identities:
+          certificates:
+              - name: "client0.org6.example.com"
+                clientPrivateKey:
+                    path: "../test-network/organizations/peerOrganizations/org6.example.com/users/User1@org6.example.com/msp/keystore/f790d222ff1113596169e9790ec748e4708009d27d6356a9d91d5490c489a8a3_sk"
+                clientSignedCert:
+                    path: "../test-network/organizations/peerOrganizations/org6.example.com/users/User1@org6.example.com/msp/signcerts/cert.pem"
+      connectionProfile:
+          path: "../test-network/organizations/peerOrganizations/org6.example.com/connection-org6.yaml"
+          discover: false
+    - mspid: Org7MSP
+      identities:
+          certificates:
+              - name: "client0.org7.example.com"
+                clientPrivateKey:
+                    path: "../test-network/organizations/peerOrganizations/org7.example.com/users/User1@org7.example.com/msp/keystore/b194b601120dc810b580ffd9371456909ed353e70b48e65ea3841cf5321413e5_sk"
+                clientSignedCert:
+                    path: "../test-network/organizations/peerOrganizations/org7.example.com/users/User1@org7.example.com/msp/signcerts/cert.pem"
+      connectionProfile:
+          path: "../test-network/organizations/peerOrganizations/org7.example.com/connection-org7.yaml"
+          discover: false
+    - mspid: Org8MSP
+      identities:
+          certificates:
+              - name: "client0.org8.example.com"
+                clientPrivateKey:
+                    path: "../test-network/organizations/peerOrganizations/org8.example.com/users/User1@org8.example.com/msp/keystore/0fc0162c81868c33309f58ec76cbe555164eda72e7dd3d340528f19e25793602_sk"
+                clientSignedCert:
+                    path: "../test-network/organizations/peerOrganizations/org8.example.com/users/User1@org8.example.com/msp/signcerts/cert.pem"
+      connectionProfile:
+          path: "../test-network/organizations/peerOrganizations/org8.example.com/connection-org8.yaml"
+          discover: false

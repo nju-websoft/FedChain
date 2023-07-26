@@ -1,0 +1,53 @@
+{
+	"model_name" : "vgg16",
+
+	"client_num" : 10,
+
+	"dataset" : "shakespeare",
+
+	"iid": false,
+
+	"niid_beta": 0.1,
+
+	"global_epochs" : 201,
+
+	"min_local_epochs": 100,
+
+	"max_local_epochs": 100,
+
+	"min_k" : 4,
+
+	"max_k" : 5,
+
+	"batch_size" : 32,
+
+	"lr" : 0.02,
+
+	"distillation_lr" : 0.1,
+
+	"momentum" : 0.9,
+
+	"dp": true,
+
+	"dp_clip": 1.0,
+
+	"sigma" : 1e-6,
+
+	"prox": true,
+
+	"exchange": true,
+
+	"cluster": false,
+
+	"cluster_centers": 2,
+
+	"exchange_probability": 0,
+
+	"max_collaborative_count": 4,
+
+	"exchange_local_epochs": 2,
+
+	"threshold": 500,
+
+	"ablation": "full"
+}

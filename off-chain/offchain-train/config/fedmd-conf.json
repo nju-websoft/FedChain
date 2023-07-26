@@ -1,0 +1,57 @@
+{
+	"model_name" : "vgg16",
+
+	"client_num" :5,
+
+	"dataset" : "cifar100",
+
+	"iid": false,
+
+	"niid_beta": 0.5,
+
+	"global_epochs" : 250,
+
+	"min_local_epochs": 2,
+
+	"max_local_epochs": 2,
+
+	"min_k" : 2,
+
+	"max_k" : 3,
+
+	"batch_size" : 32,
+
+	"lr" : 0.001,
+
+	"distillation_lr" : 5e-3,
+
+	"momentum" : 0.9,
+
+	"dp": true,
+
+	"dp_clip": 1.0,
+
+	"sigma" : 1e-6,
+
+	"exchange": true,
+
+	"cluster": true,
+
+	"cluster_centers": 3,
+
+	"exchange_probability": 0.15,
+
+	"max_collaborative_count": 2,
+
+	"exchange_local_epochs": 3,
+
+	"exchange_min_num": 1,
+
+	"exchange_max_num": 2,
+
+	"model_store_in_file": false,
+
+	"communication_with_blockchain": false,
+
+	"public_dataset_epochs": 3
+}
