@@ -20,7 +20,9 @@ class MyWorkload extends WorkloadModuleBase {
         var url = "./" + org + "/" + curHashId;
         var localRound = round;
         var timestamp =  (new Date()).valueOf();
-        var vector = "[0.1, 0.2, 0.3]";
+        //var vector = "[0.1, 0.2, 0.3]";
+        var array = Array.from({ length: 100 }, () => Math.random());
+        var vector = JSON.stringify(array);
 
         round = round + 1;
 
