@@ -1,1 +1,0 @@
-{"model_name": "vgg16", "client_num": 10, "dataset": "cifar100", "iid": false, "niid_beta": 0.3, "global_epochs": 250, "local_epochs": 1, "k": 3, "batch_size": 64, "lr": 0.01, "momentum": 0.9, "dp": true, "dp_clip": 1.0, "sigma": 1e-06, "exchange": false, "exchange_probability": 0.15, "exchange_local_epochs": 5, "exchange_min_num": 1, "exchange_max_num": 2}
