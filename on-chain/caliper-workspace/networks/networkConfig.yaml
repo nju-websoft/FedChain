@@ -1,0 +1,97 @@
+version: '1.0'
+name: Caliper test
+caliper:
+  blockchain: fabric
+clients:
+  Admin@org1.example.com:
+    client:
+      credentialStore:
+        path: /tmp/org1
+        cryptoStore:
+          path: /tmp/org1
+      organization: Org1
+      clientPrivateKey:
+        path: >-
+          ../fabric-samples-master/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/keystore/priv_sk
+      clientSignedCert:
+        path: >-
+          ../fabric-samples-master/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/signcerts/cert.pem
+      connection:
+        timeout:
+          peer:
+            endorser: '300'
+  Admin@org2.example.com:
+    client:
+      credentialStore:
+        path: /tmp/org2
+        cryptoStore:
+          path: /tmp/org2
+      organization: Org2
+      clientPrivateKey:
+        path: >-
+          ../fabric-samples-master/test-network/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp/keystore/priv_sk
+      clientSignedCert:
+        path: >-
+          ../fabric-samples-master/test-network/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp/signcerts/cert.pem
+      connection:
+        timeout:
+          peer:
+            endorser: '300'
+channels:
+  mychannel:
+    created: true
+    contracts:
+      - id: federated
+        version: '1.0'
+organizations:
+  Org1:
+    mspid: Org1MSP
+    peers:
+      - peer0.org1.example.com
+  Org2:
+    mspid: Org2MSP
+    peers:
+      - peer0.org2.example.com
+
+peers:
+  peer0.org1.example.com:
+    url: grpcs://localhost:7051
+    tlsCACerts:
+      path: >-
+        ../fabric-samples-master/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp/cacerts/localhost-7054-ca-org1.pem
+    grpcOptions:
+      ssl-target-name-override: peer0.org1.example.com
+      hostnameOverride: peer0.org1.example.com
+  peer0.org2.example.com:
+    url: grpcs://localhost:9051
+    tlsCACerts:
+      path: >-
+        ../fabric-samples-master/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/msp/cacerts/localhost-8054-ca-org2.pem
+    grpcOptions:
+      ssl-target-name-override: peer0.org2.example.com
+      hostnameOverride: peer0.org2.example.com
+
+orderers:
+  orderer.example.com:
+    url: grpcs://localhost:7050
+    grpcOptions:
+      ssl-target-name-override: orderer.example.com
+      hostnameOverride: orderer.example.com
+    tlsCACerts:
+      path: ../fabric-samples-master/test-network/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
+
+  # orderer1.example.com:
+  #   url: grpcs://192.168.1.104:8050
+  #   grpcOptions:
+  #     ssl-target-name-override: orderer1.example.com
+  #     hostnameOverride: orderer1.example.com
+  #   tlsCACerts:
+  #      path: ../fabric-samples-master/test-network/organizations/ordererOrganizations/example.com/orderers/orderer1.example.com/msp/tlscacerts/cert.pem
+
+  # orderer2.example.com:
+  #   url: 'grpcs://192.168.1.101:7050'
+  #   grpcOptions:
+  #     ssl-target-name-override: orderer2.example.com
+  #     hostnameOverride: orderer2.example.com
+  #   tlsCACerts:
+  #     path: ../fabric-samples-master/test-network/organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/msp/tlscacerts/cert.pem

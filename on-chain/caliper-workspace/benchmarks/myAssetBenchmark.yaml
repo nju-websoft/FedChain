@@ -1,0 +1,39 @@
+test:
+    name: basic-contract-benchmark
+    description: test benchmark
+    clients:
+      type: local
+      number: 1
+    workers:
+      type: local
+      number: 10
+    rounds:
+      # - label: query
+      #   txDuration: 30
+      #   rateControl:
+      #     type: fixed-load
+      #     opts:
+      #       transactionLoad: 20
+      #   workload:
+      #     module: workload/query.js
+      #     arguments:
+      #       contractId: federated
+
+      - label: upload
+        txDuration: 30
+        rateControl:
+          type: fixed-load
+          opts:
+            transactionLoad: 20
+        workload:
+          module: workload/upload.js
+          arguments:
+            contractId: federated
+monitors:
+  resource:
+  - module: docker
+    options:
+      interval: 5 
+      containers:
+      - all
+
