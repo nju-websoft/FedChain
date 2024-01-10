@@ -662,7 +662,7 @@ class PickleDataset:
 
 
 class GetDataSet(object):
-    def __init__(self, dataset_name, is_iid=True, beta=0.05, client_num=10):
+    def __init__(self, dataset_name, is_iid=True, beta=0.05, client_num=10, conf=None):
         self.name = dataset_name
         self.isIID = is_iid #数据是否满足独立同分布
         self.beta = beta
@@ -675,6 +675,8 @@ class GetDataSet(object):
         self.test_label = None  # 测试的标签
         self.test_data_size = None  # 测试集数据大小
 
+        self.conf = conf
+
 
         if self.name == "mnist":
             self.get_mnist_dataset()
@@ -683,10 +685,10 @@ class GetDataSet(object):
             self.get_fashion_mnist_dataset(client_num=self.client_num)
 
         if self.name == "cifar10":
-            self.get_cifar10_dataset(client_num=self.client_num)
+            self.get_cifar10_dataset(client_num=self.client_num, conf=self.conf)
 
         if self.name == "cifar100":
-            self.get_cifar100_dataset(client_num=self.client_num)
+            self.get_cifar100_dataset(client_num=self.client_num, conf=self.conf)
 
         if self.name == "imagenet":
             self.get_imagenet_dataset(client_num=self.client_num)
@@ -1022,7 +1024,7 @@ class GetDataSet(object):
         # self.client_idcs = client_idcs
         # self.cora_dataset = cora_dataset
 
-    def get_cifar10_dataset(self, client_num=10, class_num=10, data_dir="./data/CIFAR"):
+    def get_cifar10_dataset(self, client_num=10, class_num=10, data_dir="./data/CIFAR", conf=None):
         transform_train = transforms.Compose([
                     #transforms.RandomCrop(32, padding=4),
                     #transforms.RandomHorizontalFlip(),
@@ -1094,6 +1096,33 @@ class GetDataSet(object):
             client_idcs = [np.concatenate(idcs) for idcs in client_idcs]
             self.client_idcs = client_idcs
 
+            if conf["attack"] == "poison":
+                #定义要修改的样本比例（例如，将30%的样本标签随机变为其他类别）
+                modify_percentage = 0.3
+                malicious_client_percentage = conf["malicious_ratio"]
+                malicious_clients = np.random.choice(np.arange(len(client_idcs)), size=int(len(client_idcs) * malicious_client_percentage), replace=False)
+                print(malicious_clients)
+                # 计算要修改的样本数量
+                for client_index in malicious_clients:
+                    num_samples_to_modify = int(len(client_idcs[client_index]) * modify_percentage)
+                    # 获取所有可能的类别标签
+                    num_classes = len(train_dataset.classes)
+                    all_labels = list(range(num_classes))
+                    # 随机选择要修改的样本索引
+                    indices_to_modify = np.random.choice(client_idcs[client_index], size=num_samples_to_modify, replace=False)
+                    # 遍历要修改的样本索引，将它们的标签随机变为其他类别的标签
+                    for idx in indices_to_modify:
+                        image, label = train_dataset[idx]
+                        # 从所有可能的类别标签中排除当前样本的原始标签
+                        other_labels = [l for l in all_labels if l != label]
+                        # 随机选择一个新的标签
+                        new_label = np.random.choice(other_labels)
+                        # 修改样本的标签
+                        train_labels[idx] = new_label
+
+                        train_dataset.targets[idx] = new_label
+
+                    self.malicious_clients = malicious_clients
 
             for idcs in client_idcs:
                 a=train_labels[idcs]
@@ -1222,7 +1251,7 @@ class GetDataSet(object):
         print("The shape of agnews train label: {}".format(self.train_dataset.labels.shape))
         print("The shape of agnews test data: {}".format(self.test_dataset.ids.shape))
 
-    def get_cifar100_dataset(self, client_num=10, class_num=100, data_dir="./data/CIFAR100/"):
+    def get_cifar100_dataset(self, client_num=10, class_num=100, data_dir="./data/CIFAR100/", conf=None):
         transform_train = transforms.Compose([
             #transforms.RandomCrop(32, padding=4),
             #transforms.RandomHorizontalFlip(),
@@ -1281,6 +1310,33 @@ class GetDataSet(object):
             client_idcs = [np.concatenate(idcs) for idcs in client_idcs]
             self.client_idcs = client_idcs
 
+            if conf["attack"] == "poison":
+                #定义要修改的样本比例（例如，将30%的样本标签随机变为其他类别）
+                modify_percentage = 0.3
+                malicious_client_percentage = conf["malicious_ratio"]
+                malicious_clients = np.random.choice(np.arange(len(client_idcs)), size=int(len(client_idcs) * malicious_client_percentage), replace=False)
+                print(malicious_clients)
+                # 计算要修改的样本数量
+                for client_index in malicious_clients:
+                    num_samples_to_modify = int(len(client_idcs[client_index]) * modify_percentage)
+                    # 获取所有可能的类别标签
+                    num_classes = len(train_dataset.classes)
+                    all_labels = list(range(num_classes))
+                    # 随机选择要修改的样本索引
+                    indices_to_modify = np.random.choice(client_idcs[client_index], size=num_samples_to_modify, replace=False)
+                    # 遍历要修改的样本索引，将它们的标签随机变为其他类别的标签
+                    for idx in indices_to_modify:
+                        image, label = train_dataset[idx]
+                        # 从所有可能的类别标签中排除当前样本的原始标签
+                        other_labels = [l for l in all_labels if l != label]
+                        # 随机选择一个新的标签
+                        new_label = np.random.choice(other_labels)
+                        # 修改样本的标签
+                        train_labels[idx] = new_label
+
+                        train_dataset.targets[idx] = new_label
+
+                    self.malicious_clients = malicious_clients
 
             for idcs in client_idcs:
                 a=train_labels[idcs]

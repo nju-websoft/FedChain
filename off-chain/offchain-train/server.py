@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 import torch.nn.functional as F
 from sklearn.cluster import AgglomerativeClustering
 import copy
+from attack.defenses import *
 
 np.random.seed(33)
 
@@ -74,8 +75,6 @@ class Server(object):
             self.clients_cluster_map[id] = id % self.conf["cluster_centers"]
 
 
-
-
     def model_update_aggregate(self, weight_accumulator):
         for name, data in self.global_model.state_dict().items():
             #update_per_layer = weight_accumulator[name] * self.conf["lambda"]
@@ -95,7 +94,7 @@ class Server(object):
             else:
                 data.add_(update_per_layer)
 
-    def model_weight_aggregate(self, models, client_datalen=None, total_len=None, ids=None, dataset=None):
+    def model_weight_aggregate(self, models, client_datalen=None, total_len=None, ids=None, dataset=None, w=None):
 
          fed_state_dict = collections.OrderedDict()
 
@@ -106,19 +105,50 @@ class Server(object):
          #    sum = torch.div(sum, len(models))
          #    fed_state_dict[key] = sum
 
-         client_datalen = np.array(client_datalen)
-         client_datalen = client_datalen/total_len
-         ids_len = client_datalen[ids]
-         ids_len /= np.sum(ids_len)
+         if w is None:
+             client_datalen = np.array(client_datalen)
+             client_datalen = client_datalen / total_len
+             ids_len = client_datalen[ids]
+             ids_len /= np.sum(ids_len)
+             weights = ids_len
+         else:
+             weights = w
 
-         for key, param in self.global_model.state_dict().items():
-            sum = torch.zeros_like(param)
-            for i in range(len(ids)):
-                model =models[i]
-                sum.add_(model.state_dict()[key].clone().to(self.device) * ids_len[i])
-            fed_state_dict[key] = sum
+         if self.conf["defense"] == "krum":
+             #selected_models = krum(models, ids, num_malicious=2)
 
-         self.global_model.load_state_dict(fed_state_dict)
+             selected_models = multi_krum(models, ids, num_malicious=int(self.conf["client_num"] * self.conf["malicious_ratio"]), multi=3)
+             for key, param in self.global_model.state_dict().items():
+                sum = torch.zeros_like(param)
+                for i in range(len(selected_models)):
+                    model = selected_models[i]
+                    sum.add_(model.state_dict()[key].clone().to(self.device) * (1.0 / len(selected_models)))
+
+                fed_state_dict[key] = sum
+             self.global_model.load_state_dict(fed_state_dict)
+
+         elif self.conf["defense"] == "trimmed":
+             fed_state_dict = trimmed_mean(models)
+             self.global_model.load_state_dict(fed_state_dict)
+
+         elif self.conf["defense"] == "median":
+             fed_state_dict = median(models)
+             self.global_model.load_state_dict(fed_state_dict)
+
+         elif self.conf["defense"] == "bulyan":
+             fed_state_dict = bulyan(models, ids, num_malicious=int(self.conf["client_num"] * self.conf["malicious_ratio"]), num_to_agg=3)
+             self.global_model.load_state_dict(fed_state_dict)
+
+         else:
+             for key, param in self.global_model.state_dict().items():
+                sum = torch.zeros_like(param)
+                for i in range(len(ids)):
+                    model =models[i]
+                    #sum.add_(model.state_dict()[key].clone().to(self.device) * ids_len[i])
+                    sum.add_(model.state_dict()[key].clone().to(self.device) * weights[i])
+
+                fed_state_dict[key] = sum
+             self.global_model.load_state_dict(fed_state_dict)
 
          if dataset is None:
              acc, loss = self.model_eval()
@@ -333,7 +363,7 @@ class Server(object):
         # return global_acc, global_loss
 
 
-    def async_model_weight_aggregate(self, model, local_model_round):
+    def async_model_weight_aggregate(self, model, local_model_round, dataset=None, weight=0):
          self.round += 1
 
          print("Server start {}-th round avg with the old {}-th local model".format(self.round, local_model_round))
@@ -341,7 +371,10 @@ class Server(object):
          #     alpha = float(1/(self.round-2-local_model_round)**2)
          # else:
          #     alpha = 1.0
-         alpha = float((self.round - local_model_round + 1)**(-0.9))
+         if weight != 0:
+            alpha = weight
+         else:
+            alpha = float((self.round - local_model_round + 1)**(-0.9))
          print("the local model weight is {}".format(alpha))
 
          fed_state_dict = collections.OrderedDict()
@@ -353,6 +386,13 @@ class Server(object):
             fed_state_dict[key] = sum
 
          self.global_model.load_state_dict(fed_state_dict)
+
+         if dataset is None:
+             acc, loss = self.model_eval()
+         else:
+             acc, loss = self.model_eval_graph(dataset)
+
+         return acc, loss
 
     def model_eval(self, model_for_test=None):
         if self.eval_dataset is None:

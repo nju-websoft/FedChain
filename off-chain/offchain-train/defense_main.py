@@ -16,6 +16,8 @@ import dataset
 import models
 import plot
 
+from attack.backdoor_attack import *
+
 random.seed(666)
 
 if __name__ == '__main__':
@@ -49,7 +51,7 @@ if __name__ == '__main__':
     best_acc = 0.0
     save_name = conf["dataset"] + "_result_" + ("iid" if conf["iid"] else ("niid" + str(conf["niid_beta"]))) + "_" + (
         "exchange" if conf["exchange"] else "base") + ("_cluster" if conf["cluster"] else "") + ("_prox" if conf["prox"] else "") \
-                + ("_poison"+str(conf["malicious_ratio"]) if conf["attack"] else "_not_poison") + ("_"+conf["defense"] if conf["poison"] else "")
+                + ("_" + conf["attack"] + str(conf["malicious_ratio"]) if conf["attack"] else "") + ("_"+conf["defense"] if conf["attack"] else "")
     suffix = ("" if conf["ablation"]=="full" else ("_without_" + conf["ablation"]))
     save_dir = os.path.join("./results", save_name + suffix)
     if not os.path.exists(save_dir):
@@ -64,7 +66,10 @@ if __name__ == '__main__':
     accuracy = []
     validloss = []
 
-    dataset = dataset.GetDataSet(dataset_name=conf["dataset"], is_iid=conf["iid"], beta=conf["niid_beta"], client_num=conf["client_num"])
+    dataset = dataset.GetDataSet(dataset_name=conf["dataset"], is_iid=conf["iid"], beta=conf["niid_beta"], client_num=conf["client_num"], conf=conf)
+
+    backdoor_dataset = PerturbCIFAR10(root="./data/CIFAR", train=True, download=True)
+
     server = Server(conf, dataset.test_dataset, device=torch.device(device1))
     acc, loss = server.model_eval()
 
@@ -81,15 +86,26 @@ if __name__ == '__main__':
 
     client_datalen = []
     total_len = len(dataset.train_dataset)
+
+    malicious_clients = []
+    if conf["attack"] == "lie" or conf["attack"] == "backdoor":
+        malicious_indices = np.random.choice(np.arange(conf["client_num"]), size=int(conf["client_num"] * conf["malicious_ratio"]), replace=False)
+    elif conf["attack"] == "poison":
+        malicious_indices = dataset.malicious_clients
+    else:
+        malicious_indices = []
+
+
     for i in range(conf["client_num"]):
         if conf["iid"] == False:
             subset = torch.utils.data.Subset(dataset.train_dataset, dataset.client_idcs[i])
+            backdoor_subset = torch.utils.data.Subset(backdoor_dataset, dataset.client_idcs[i])
 
         else:
             shards = list(range(shard_id[i] * shard_size, shard_id[i] * shard_size + shard_size))
             subset = torch.utils.data.Subset(dataset.train_dataset, shards)
 
-        clients.append(Client(
+        client = Client(
             conf=conf,
             #train_dataset=torch.utils.data.ConcatDataset([subset, global_subset]),
             train_dataset=subset,
@@ -97,8 +113,15 @@ if __name__ == '__main__':
             id=i,
             global_model=server.global_model,
             #device=torch.device("cuda:" + str((i+1) % 4))
-            device=torch.device(device1)
-        ))
+            device=torch.device(device1),
+            is_malicious=(True if i in malicious_indices else False),
+            backdoor_dataset=backdoor_subset
+        )
+
+        clients.append(client)
+        if client.is_malicious:
+            malicious_clients.append(client)
+
         client_datalen.append(len(subset)*1.0)
     client_datalen = np.array(client_datalen)
 
@@ -117,7 +140,8 @@ if __name__ == '__main__':
     for e in range(1, conf["global_epochs"]):
 
         k = random.randint(conf["min_k"], conf["max_k"])
-        candidates = random.sample(clients, k)
+        candidates_clients = random.sample(clients, k)
+        candidates = list(set(candidates_clients) | set(malicious_clients))
 
         if conf["exchange"]:
             for c in candidates:
@@ -173,7 +197,22 @@ if __name__ == '__main__':
                 if conf["cluster"]:
                     c.local_train(server.cluster_models[server.clients_cluster_map[c.client_id]])
                 else:
-                    c.local_train(server.global_model)
+                    #if c.is_malicious == False:
+                    if conf["attack"] == "backdoor":
+                        if c.is_malicious == False:
+                            c.local_train(server.global_model)
+                        else:
+                            print("malicious client is {}".format(c.client_id))
+                            c.backdoor_local_train(server.global_model)
+
+                    else:
+                        c.local_train(server.global_model)
+
+            if conf["attack"] == "lie":
+                malicious_grad = attack([c.local_model for c in malicious_clients], malicious_ratio=conf["malicious_ratio"])
+                for c in malicious_clients:
+                    c.local_model.load_state_dict(copy.deepcopy(malicious_grad))
+                print("malicious clients:{}, candidate clients:{}".format(malicious_indices, [c.client_id for c in candidates]))
 
             if conf["cluster"]:
                 acc, loss = server.cluster_model_weight_aggregate(

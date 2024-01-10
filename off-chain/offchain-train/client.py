@@ -20,12 +20,13 @@ from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor
 
 from sparsity_extract import *
+from attack.lie_attack import *
 
 np.random.seed(33)
 
 class Client(object):
 
-    def __init__(self, conf, train_dataset, test_dataset=None, id=-1, global_model=None, device=None):
+    def __init__(self, conf, train_dataset, test_dataset=None, id=-1, global_model=None, device=None, is_malicious=False, backdoor_dataset=None):
 
         self.conf = conf
 
@@ -76,6 +77,7 @@ class Client(object):
                                                         shuffle=False)
 
         self.extractor = None
+        self.time_list = []
         if self.conf["exchange"]:
             if self.conf["dataset"] == "shakespeare":
                  self.extractor = NLPFeatureExtractor(model=self.local_model, dataset_name=self.conf["dataset"])
@@ -98,6 +100,11 @@ class Client(object):
 
         self.prev_local_model = self.local_model
 
+        self.is_malicious = is_malicious
+        self.backdoor_dataset = backdoor_dataset
+        if backdoor_dataset is not None:
+            self.backdoor_train_loader = torch.utils.data.DataLoader(self.backdoor_dataset, batch_size=conf["batch_size"],
+                                                        shuffle=True)
 
     def local_train(self, model, model_round=None):
 
@@ -113,10 +120,10 @@ class Client(object):
             self.extractor.update_model(self.local_model)
             self.extractor.mean_list = np.zeros((1, self.extractor.num_channels))
 
-        #optimizer = torch.optim.SGD(self.local_model.parameters(), lr=self.conf['lr'], momentum=self.conf['momentum'])
+        optimizer = torch.optim.SGD(self.local_model.parameters(), lr=self.conf['lr'], momentum=self.conf['momentum'])
 
         #graph
-        optimizer = torch.optim.Adam(self.local_model.parameters(), lr=self.conf['lr'])
+        #optimizer = torch.optim.Adam(self.local_model.parameters(), lr=self.conf['lr'])
 
         criterion = torch.nn.CrossEntropyLoss()
 
@@ -173,6 +180,8 @@ class Client(object):
            self.extractor.old_all_vectors = self.extractor.mean_list.copy()
            temp = self.extractor.mean_list.mean(axis=0)
            self.extractor.mean_list = temp.reshape((1, self.extractor.num_channels))
+
+           self.time_list.append(end-start)
            #print(self.extractor.old_all_vectors.shape)
         return acc, total_l
 
@@ -618,6 +627,92 @@ class Client(object):
             acc_val, loss_val = self.eval_model_graph(dataset=dataset)
         return acc_val, loss_val
 
+    def backdoor_local_train(self, model, model_round=None):
+
+        if model_round is not None:
+            self.round = model_round + 1
+            print("Client {} pull the {}-th round model for training".format(self.client_id, model_round))
+
+        # for name, param in model.state_dict().items():
+        #     self.local_model.state_dict()[name].copy_(param.clone())
+        self.local_model.load_state_dict(copy.deepcopy(model.state_dict()))
+
+        if not self.extractor is None:
+            self.extractor.update_model(self.local_model)
+            self.extractor.mean_list = np.zeros((1, self.extractor.num_channels))
+
+        optimizer = torch.optim.SGD(self.local_model.parameters(), lr=self.conf['lr'], momentum=self.conf['momentum'])
+
+        #graph
+        #optimizer = torch.optim.Adam(self.local_model.parameters(), lr=self.conf['lr'])
+
+        criterion = torch.nn.CrossEntropyLoss()
+
+        epoch = random.randint(self.conf["min_local_epochs"], self.conf["max_local_epochs"])
+
+        self.local_model.to(self.device)
+
+        #self.extractor.mean_list = np.zeros((1, self.extractor.num_channels))
+
+        start = time.time()
+
+
+        for e in range(epoch):
+            self.local_model.train()
+            total_loss = 0.0
+
+            for batch_id, (normal_batch, backdoor_batch) in enumerate(tqdm(zip(self.train_loader, self.backdoor_train_loader), file=sys.stdout)):
+            #for batch_id, batch in enumerate(tqdm(self.train_loader, file=sys.stdout)):
+            #for batch_id, batch in enumerate(self.train_loader):
+                normal_data, normal_target = normal_batch
+                backdoor_data, backdoor_target = backdoor_batch
+
+                normal_data = normal_data.to(self.device)
+                normal_target = normal_target.to(self.device, dtype=torch.long)
+                backdoor_data = backdoor_data.to(self.device)
+                backdoor_target = backdoor_target.to(self.device, dtype=torch.long)
+
+                optimizer.zero_grad()
+
+                normal_output = self.local_model(normal_data)
+                backdoor_output = self.local_model(backdoor_data)
+
+                alpha = 0.7
+                loss = alpha * criterion(normal_output, normal_target) + (1 - alpha) * criterion(backdoor_output, backdoor_target)
+
+                if self.conf["prox"] == True:
+                    proximal_term = 0.0
+                    for w, w_t in zip(self.local_model.parameters(), model.parameters()):
+                        proximal_term += (w - w_t.clone().to(self.device)).norm(2)
+                    #print("{},{}".format(loss, proximal_term))
+                    loss = loss + (0.1 / 2) * proximal_term
+
+                loss.backward(retain_graph=True)
+                total_loss += loss.item()
+
+                if self.conf['dp'] == True:
+                    torch.nn.utils.clip_grad_norm_(self.local_model.parameters(), max_norm=1.0, norm_type=2)
+
+                optimizer.step()
+
+                if e == epoch - 1 and not self.extractor is None:
+                    with torch.no_grad():
+                        self.extractor(normal_data)
+
+            end = time.time()
+            acc, total_l = self.eval_model()
+            print("Epoch {} done. Train loss {}. Valid accuracy {}, Consume: {}".format(e, total_loss, acc, end-start))
+
+        print("client {} finish local train".format(self.client_id))
+
+        if not self.extractor is None:
+
+           self.extractor.old_all_vectors = self.extractor.mean_list.copy()
+           temp = self.extractor.mean_list.mean(axis=0)
+           self.extractor.mean_list = temp.reshape((1, self.extractor.num_channels))
+           #print(self.extractor.old_all_vectors.shape)
+        return acc, total_l
+
 class ClientGroup(object):
     def __init__(self, conf, have_server=False):
         self.conf = conf
@@ -669,12 +764,14 @@ class ClientGroup(object):
 if __name__ == "__main__":
     #torch.cuda.empty_cache()
 
-    with open("./config/test-conf.json", 'r') as f:
+    with open("./config/conf.json", 'r') as f:
         conf = json.load(f)
 
     client_group = ClientGroup(conf=conf, have_server=False)
 
-    cora_dataset = client_group.cora_data
+    clients = client_group.clients
+    attack(clients[:2])
+
 
     #server = client_group.server
     # client0 = client_group.clients[0]
@@ -683,12 +780,14 @@ if __name__ == "__main__":
     #client3 = client_group.clients[3]
     #client5 = client_group.clients[5]
 
-    avg = 0.0
-    for i in range(10):
-        client_group.clients[i].local_train_graph(client_group.clients[i].local_model, cora_dataset)
-        acc, _ = client_group.clients[i].eval_model_graph(cora_dataset.cora_dataset)
-        avg += acc
-    print(avg / 10.0)
+
+    # cora_dataset = client_group.cora_data
+    # avg = 0.0
+    # for i in range(10):
+    #     client_group.clients[i].local_train_graph(client_group.clients[i].local_model, cora_dataset)
+    #     acc, _ = client_group.clients[i].eval_model_graph(cora_dataset.cora_dataset)
+    #     avg += acc
+    # print(avg / 10.0)
 
     # start = time.time()
     #client1.local_train_graph(client1.local_model, cora_dataset)

@@ -110,8 +110,6 @@ def make_layers(cfg, batch_norm=False):
     return nn.Sequential(*layers)
 
 
-
-
 class BertClassifer(BertPreTrainedModel):
     def __init__(self, config):
         super(BertClassifer, self).__init__(config)
