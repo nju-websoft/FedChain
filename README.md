@@ -29,6 +29,11 @@ $  npm install
 ```
 $  node client.js
 ```
+3. Install Caliper dependancies:
+```
+$  npm install --only=prod @hyperledger/caliper-cli
+$  npx caliper bind --caliper-bind-sut fabric:2.1
+```
 
 #### 3.   We start multiple client processes for local training.
 
@@ -36,3 +41,17 @@ $  node client.js
 ```
 $ ./start_clients.sh 10
 ```
+2. End
+```
+$ ./end.sh
+```
+
+#### 4.   To facilitate the performance comparison of various federated learning methods, we implemented an off-chain version to simplify operation.
+
+1. Modify the hyperparameters in ./config/conf.json
+2. Run the script such as:
+```
+$  python main.py -c ./config/conf.json
+```
+
+#### 5.   We plot the convergence comparison with plot.py based on the results in ./offchain/offchain-train/results
